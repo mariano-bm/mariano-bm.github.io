@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comparador de Excel CRZ </title>
+  <title>Comparador de Excel CRZ</title>
 </head>
 <body>
   <input type="file" id="excelFile1" />
@@ -36,12 +36,8 @@
           var workbook2 = XLSX.read(data2, { type: 'array' });
           var sheet2 = workbook2.Sheets[workbook2.SheetNames[0]];
 
-          // Obtener todas las celdas de ambas hojas
-          var cells1 = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
-          var cells2 = XLSX.utils.sheet_to_json(sheet2, { header: 1 });
-
-          // Encontrar diferencias entre las celdas
-          var differences = findDifferences(cells1, cells2);
+          // Encontrar diferencias entre todas las celdas
+          var differences = findDifferences(sheet1, sheet2);
 
           // Guardar las diferencias en un archivo de texto
           saveDifferencesToFile(differences);
@@ -53,14 +49,28 @@
       reader.readAsArrayBuffer(file1);
     }
 
-    function findDifferences(cells1, cells2) {
+    function findDifferences(sheet1, sheet2) {
       var differences = [];
 
-      for (var i = 0; i < cells1.length; i++) {
-        for (var j = 0; j < cells1[i].length; j++) {
+      // Obtener información sobre el rango de cada hoja de Excel
+      var range1 = XLSX.utils.decode_range(sheet1['!ref']);
+      var range2 = XLSX.utils.decode_range(sheet2['!ref']);
+
+      // Determinar el número máximo de filas y columnas
+      var maxRows = Math.max(range1.e.r, range2.e.r);
+      var maxCols = Math.max(range1.e.c, range2.e.c);
+
+      // Iterar sobre todas las filas
+      for (var i = 0; i <= maxRows; i++) {
+        // Iterar sobre todas las columnas
+        for (var j = 0; j <= maxCols; j++) {
+          // Obtener valores de las celdas (manejando celdas vacías o indefinidas)
+          var value1 = sheet1[XLSX.utils.encode_cell({ r: i, c: j })]?.v || '';
+          var value2 = sheet2[XLSX.utils.encode_cell({ r: i, c: j })]?.v || '';
+
           // Compara las celdas y agrega las diferencias a la lista
-          if (cells1[i][j] !== cells2[i][j]) {
-            differences.push('Celda [' + i + ',' + j + ']: ' + cells1[i][j]);
+          if (value1 !== value2) {
+            differences.push('Diferencia en Celda [' + getExcelColumnLabel(j + 1) + ', ' + (i + 1) + ']: ' + value1 + ' !== ' + value2);
           }
         }
       }
@@ -78,6 +88,16 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+    }
+
+    function getExcelColumnLabel(column) {
+      var label = '';
+      while (column > 0) {
+        var remainder = (column - 1) % 26;
+        label = String.fromCharCode(65 + remainder) + label;
+        column = Math.floor((column - 1) / 26);
+      }
+      return label;
     }
   </script>
 </body>
